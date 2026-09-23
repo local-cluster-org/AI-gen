@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 MCP Server using FastMCP Framework with SSE Transport
-Exposes HTTP endpoint instead of stdio for remote connections.
+Exposes HTTP endpoint instead of stdio fccor remote connections.
 """
 
 from fastmcp import FastMCP
