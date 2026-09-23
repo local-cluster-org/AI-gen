@@ -1,50 +1,145 @@
+#!/usr/bin/env python3
 """
-Intentionally vulnerable MCP agent client for AI Supply Chain scan testing.
-Do not run against a real network - this is a scan fixture only.
+MCP Server using FastMCP Framework with SSE Transport
+Exposes HTTP endpoint instead of stdio for remote connections.
 """
 
-import subprocess
-from mcp import ClientSession
-from mcp.client.sse import sse_client
+from fastmcp import FastMCP
 
-# Vuln 1: unpinned, untrusted third-party MCP server fetched over plain HTTP,
-# no integrity/signature check before connecting.
-MCP_SERVER_URL = "http://public-mcp-tools.example-registry.io/sse"
-
-# Vuln 2: static, hardcoded credential used to authenticate to the MCP server
-# instead of a secret manager / env-injected token.
-MCP_AUTH_TOKEN = "sk-mcp-4f9a2b7c1e6d4a3b9f0c8d7e6a5b4c3d"
-
-# Vuln 3: agent trusts every tool the server advertises, with no allowlist,
-# no schema validation, and no human-in-the-loop confirmation.
-def load_all_remote_tools(session: ClientSession):
-    tools = session.list_tools()
-    return tools  # no filtering by name, origin, or declared capability
+# Create FastMCP app instance
+app = FastMCP("simple-mcp-fastmcp-sse")
 
 
-# Vuln 4: tool_choice="auto" combined with a shell-executing tool implementation
-# lets the remote MCP server's tool definitions drive arbitrary local execution.
-def execute_tool_call(tool_name: str, arguments: dict):
-    if tool_name == "run_shell":
-        # Vuln 5: command built from unsanitized model/tool output, run with
-        # shell=True - classic injection surface once the "AI asset" is compromised.
-        command = arguments.get("command", "")
-        result = subprocess.run(command, shell=True, capture_output=True)
-        return result.stdout
-    return None
+# ============================================================================
+# TOOLS - Decorated functions automatically converted to MCP tools
+# ============================================================================
+
+@app.tool()
+def add(a: float, b: float) -> str:
+    """Add two numbers together."""
+    result = a + b
+    return f"{a} + {b} = {result}"
 
 
-async def connect_and_run(user_prompt: str):
-    async with sse_client(MCP_SERVER_URL, headers={"Authorization": MCP_AUTH_TOKEN}) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
+@app.tool()
+def multiply(x: float, y: float) -> str:
+    """Multiply two numbers together."""
+    result = x * y
+    return f"{x} * {y} = {result}"
 
-            tools = load_all_remote_tools(session)
 
-            # Vuln 6: model output (tool call arguments) passed straight into
-            # execution with no output/argument validation layer.
-            for tool in tools:
-                call_result = await session.call_tool(tool.name, {"command": user_prompt})
-                execute_tool_call(tool.name, {"command": call_result})
+@app.tool()
+def greet(name: str) -> str:
+    """Greet someone by name."""
+    return f"Hello, {name}! Welcome to the FastMCP SSE Server."
 
-            return "done"
+
+@app.tool()
+def concatenate(text1: str, text2: str) -> str:
+    """Concatenate two text strings."""
+    result = text1 + text2
+    return f"'{text1}' + '{text2}' = '{result}'"
+
+
+@app.tool()
+def power(base: float, exponent: float) -> str:
+    """Raise a number to a power."""
+    result = base ** exponent
+    return f"{base} ^ {exponent} = {result}"
+
+
+# ============================================================================
+# RESOURCES - Static data accessible via URI
+# ============================================================================
+
+@app.resource("greeting://welcome")
+def greeting_welcome() -> str:
+    """Welcome greeting message."""
+    return "Hello! Welcome to the FastMCP SSE Server.\n\nThis server uses HTTP/SSE transport instead of stdio."
+
+
+@app.resource("config://server")
+def server_config() -> str:
+    """Server configuration and metadata."""
+    return """{
+  "server_name": "Simple MCP FastMCP SSE Server",
+  "version": "2.0.0",
+  "framework": "FastMCP",
+  "transport": "SSE (Server-Sent Events over HTTP)",
+  "description": "A lightweight MCP server using FastMCP framework with SSE transport",
+  "tools": {
+    "add": "Add two numbers",
+    "multiply": "Multiply two numbers",
+    "greet": "Greet someone by name",
+    "concatenate": "Concatenate two text strings",
+    "power": "Raise a number to a power"
+  },
+  "resources": [
+    "greeting://welcome",
+    "config://server",
+    "docs://tools",
+    "docs://framework"
+  ]
+}"""
+
+
+@app.resource("docs://tools")
+def tools_documentation() -> str:
+    """Documentation of all available tools."""
+    return """
+# Available Tools
+
+## add(a: float, b: float) -> str
+Add two numbers together.
+
+## multiply(x: float, y: float) -> str
+Multiply two numbers together.
+
+## greet(name: str) -> str
+Greet someone by name.
+
+## concatenate(text1: str, text2: str) -> str
+Concatenate two text strings.
+
+## power(base: float, exponent: float) -> str
+Raise a number to a power.
+"""
+
+
+@app.resource("docs://framework")
+def framework_documentation() -> str:
+    """Information about FastMCP framework."""
+    return """
+# FastMCP Framework
+
+FastMCP is a lightweight Python framework for building Model Context Protocol servers.
+
+## Key Features:
+- Simple decorator-based API (@app.tool(), @app.resource())
+- Automatic schema generation from Python types
+- Built on top of the official MCP SDK
+- Support for both stdio and SSE transports
+- Minimal boilerplate code
+
+## Transport Options:
+- stdio: For local subprocess communication
+- SSE: For HTTP-based remote connections
+
+This server uses SSE transport for web-based clients.
+"""
+
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+if __name__ == "__main__":
+    # Run the server with SSE transport on HTTP endpoint
+    # Default: http://localhost:8000/sse
+    app.run(transport="sse")
+    
+    # You can customize the port:
+    # app.run(transport="sse", port=8080)
+    
+    # Or specify host and port:
+    # app.run(transport="sse", host="0.0.0.0", port=8000)
