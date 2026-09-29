@@ -1,0 +1,24 @@
+{
+  "name": "vulnerability-test-project",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Test project for SCA vulnerability scanning",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "4.17.1",
+    "lodash": "4.17.20",
+    "axios": "0.21.1",
+    "minimist": "1.2.5",
+    "node-forge": "1.2.1",
+    "json5": "1.0.1",
+    "qs": "6.5.2",
+    "path-parse": "1.0.6"
+  },
+  "devDependencies": {
+    "webpack": "5.74.0",
+    "glob": "7.1.6",
+    "js-yaml": "3.13.1"
+  }
+}
