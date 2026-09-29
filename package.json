@@ -1,5 +1,5 @@
 {
-  "name": "vulnerability-test-project",
+  "name": "vulnerability-test-project--",
   "version": "1.0.0",
   "private": true,
   "description": "Test project for SCA vulnerability scanning",
