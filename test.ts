@@ -3,7 +3,7 @@ import { exec } from "child_process";
 
 const app = express();
 
-// 1. Command Injection
+// 1. Command Injectionxcvcxv
 app.get("/ping", (req, res) => {
   const host = req.query.host as string;
 
